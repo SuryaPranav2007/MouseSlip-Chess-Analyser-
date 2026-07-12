@@ -1,0 +1,311 @@
+/* Import Chessground core styles */
+@import "chessground/assets/chessground.base.css";
+@import "chessground/assets/chessground.brown.css";
+@import "chessground/assets/chessground.cburnett.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design Tokens ────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+  background-color: #0A0A0C;
+
+  /* Typography */
+  font-family: 'Inter', 'Outfit', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue',
+    sans-serif;
+
+  /* Palette */
+  --color-base:        #0A0A0C;
+  --color-panel:       #151517;
+  --color-rim:         #1C1C1F;
+  --color-brass:       #C9A356;
+  --color-brass-dark:  #A07E3A;
+  --color-brass-light: #D9B870;
+  --color-sage:        #7A8471;
+  --color-brick:       #8B3A3A;
+  --color-warm-white:  #EDEAE3;
+  --color-muted:       #8A8A85;
+  --color-dim:         #5A5A57;
+
+  /* Glass/elevation */
+  --transition-glide: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --glass-blur:       12px;
+  --glass-bg:         rgba(21, 21, 23, 0.85);
+  --glass-border:     rgba(201, 163, 86, 0.10);
+  --glow-gold-ambient: rgba(201, 163, 86, 0.06);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0A0A0C;
+  color: #EDEAE3;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+*, ::before, ::after {
+  box-sizing: border-box !important;
+}
+
+/* ── Chessground ──────────────────────────────────────────────────────────── */
+.cg-wrap {
+  position: relative;
+  user-select: none;
+  border-radius: 0px !important;
+  overflow: hidden;
+  border: none !important;
+}
+
+.cg-wrap .square.light {
+  background-color: #eeeed2 !important;
+}
+
+.cg-wrap .square.dark {
+  background-color: #769656 !important;
+}
+
+/* Coordinates — engraved premium look */
+.cg-wrap coords {
+  font-weight: 800;
+  font-size: 12.5px;
+  font-family: 'JetBrains Mono', 'Outfit', 'Inter', sans-serif;
+  letter-spacing: 0.03em;
+  opacity: 1 !important;
+}
+
+.cg-wrap coords.files { bottom: 2px; }
+.cg-wrap coords.ranks { left: 4px; }
+.cg-wrap coord { opacity: 1 !important; }
+
+/* Coordinates on dark squares */
+.cg-wrap coords.files coord:nth-child(odd),
+.cg-wrap coords.ranks coord:nth-child(odd),
+.cg-wrap coords.files.black coord:nth-child(even),
+.cg-wrap coords.ranks.black coord:nth-child(even) {
+  color: #f5edd6 !important;
+  text-shadow: -0.5px -0.5px 1px rgba(0, 0, 0, 0.55), 0.5px 0.5px 1px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Coordinates on light squares */
+.cg-wrap coords.files coord:nth-child(even),
+.cg-wrap coords.ranks coord:nth-child(even),
+.cg-wrap coords.files.black coord:nth-child(odd),
+.cg-wrap coords.ranks.black coord:nth-child(odd) {
+  color: #634329 !important;
+  text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.75), -0.5px -0.5px 0.5px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Move highlights */
+.cg-wrap .square.last-move {
+  background-color: rgba(247, 247, 133, 0.45) !important;
+}
+
+.cg-wrap .square.selected {
+  background-color: rgba(247, 247, 133, 0.6) !important;
+}
+
+.cg-wrap square.move-dest {
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.15) 19%, transparent 20%) !important;
+}
+
+.cg-wrap square.occluded.move-dest {
+  background: transparent !important;
+  border: 4.5px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+}
+
+.cg-wrap .square.check {
+  background: radial-gradient(circle, rgba(244, 67, 54, 0.65) 0%, rgba(0,0,0,0) 80%) !important;
+}
+
+/* Arrow SVGs */
+.cg-wrap svg {
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Best-move arrow — sage green */
+.cg-wrap svg defs marker path {
+  fill: #7A8471 !important;
+}
+
+.cg-wrap svg g path {
+  stroke: #7A8471 !important;
+  stroke-width: 0.06;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+/* Red arrows */
+.cg-wrap svg g path[stroke*="red"] { stroke: #8B3A3A !important; }
+.cg-wrap svg defs marker[id*="red"] path { fill: #8B3A3A !important; }
+
+/* Blue arrows */
+.cg-wrap svg g path[stroke*="blue"] { stroke: #4A7BAF !important; }
+.cg-wrap svg defs marker[id*="blue"] path { fill: #4A7BAF !important; }
+
+/* Yellow (2nd-best) arrows */
+.cg-wrap svg g path[stroke*="yellow"] { stroke: #D4AA40 !important; }
+.cg-wrap svg defs marker[id*="yellow"] path { fill: #D4AA40 !important; }
+
+/* ── Scrollbars ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: #0A0A0C; }
+::-webkit-scrollbar-thumb  { background: #2A2A2E; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3A3A3E; }
+
+/* Custom premium thin scrollbar — brass tinted */
+.custom-scrollbar::-webkit-scrollbar       { width: 5px; height: 5px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.01); }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(201, 163, 86, 0.20);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 163, 86, 0.42);
+}
+
+/* ── Glass / elevation panels ─────────────────────────────────────────────── */
+.glass-panel {
+  background-color: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) !important;
+  border: 1px solid rgba(201, 163, 86, 0.09) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(201, 163, 86, 0.05),
+    0 4px 20px rgba(0, 0, 0, 0.55),
+    0 1px 4px rgba(0, 0, 0, 0.35) !important;
+  transition: border-color var(--transition-glide) !important;
+}
+
+.glass-panel:hover {
+  border-color: rgba(201, 163, 86, 0.20) !important;
+}
+
+.glow-panel {
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(201, 163, 86, 0.08);
+}
+
+.glow-green {
+  box-shadow: 0 0 15px rgba(122, 132, 113, 0.3);
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 0.78; }
+}
+
+.animate-arrow-fade {
+  animation: fadeIn var(--transition-glide) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-panel         { transition: none !important; }
+  .animate-arrow-fade  { animation: none !important; opacity: 0.78 !important; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes badgePop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  55%  { transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up-fade {
+  animation: slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scaleUpCentered {
+  from { opacity: 0; transform: translate(-50%, -8px) scale(0.92); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+.animate-scale-up {
+  animation: scaleUpCentered 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Antique brass button — primary action ────────────────────────────────── */
+.btn-brass {
+  background: linear-gradient(135deg, #C9A356 0%, #A07E3A 100%);
+  border: 1px solid rgba(201, 163, 86, 0.45);
+  color: #1A1408;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(201, 163, 86, 0.20), inset 0 1px 0 rgba(255,255,255,0.10);
+  transition: all 150ms ease;
+}
+
+.btn-brass:hover {
+  background: linear-gradient(135deg, #D9B870 0%, #C9A356 100%);
+  box-shadow: 0 4px 14px rgba(201, 163, 86, 0.30), inset 0 1px 0 rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+
+.btn-brass:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(201, 163, 86, 0.15);
+}
+
+/* ── Flat secondary button ────────────────────────────────────────────────── */
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(138, 138, 133, 0.22);
+  color: #8A8A85;
+  font-weight: 600;
+  transition: all 150ms ease;
+}
+
+.btn-secondary:hover {
+  border-color: rgba(201, 163, 86, 0.35);
+  color: #C9A356;
+  background: rgba(201, 163, 86, 0.06);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* ── Antique instrument panel surface ─────────────────────────────────────── */
+.antique-panel {
+  background: #151517;
+  border: 1px solid rgba(201, 163, 86, 0.10);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.35);
+}
+
+/* ── Brass frame (used on eval bar) ───────────────────────────────────────── */
+.brass-frame {
+  border: 1.5px solid rgba(201, 163, 86, 0.38);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.8),
+    0 2px 12px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(201, 163, 86, 0.08);
+}

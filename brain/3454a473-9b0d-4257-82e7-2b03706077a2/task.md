@@ -1,0 +1,59 @@
+# MouseSlip Premium Chess Analysis Upgrade Tasks
+
+- `[x]` Move Classification Engine Redesign
+    - `[x]` Replaced simplistic fixed centipawn thresholds with a dynamic winning probability drop model based on the Elo Elo-formula mapping
+    - `[x]` Evaluated positional quality, tactical drops, only moves, and material sacrifices for Brilliant (!!), Great (!), and Miss (X) classifications
+    - `[x]` Tuned thresholds for Excellent, Best, Good, Inaccuracy, Mistake, and Blunder classifications
+    - `[x]` Passed all backend utility and classification tests successfully
+- `[x]` Real-Time real-time FEN & PGN Analysis Pipeline
+    - `[x]` Add engine PV (Principal Variation) state tracking to App.tsx and feed it to the Chessboard component
+    - `[x]` Render multiple color-coded PV arrows on the board (green for 1st best, blue for 2nd best, yellow for 3rd best) and highlight the destination square of the recommended move
+    - `[x]` Add an interactive, scrollable Engine PV Line display in the ControlPanel, converting raw UCI moves into standard algebraic notation (SAN)
+    - `[x]` Enable stepping through PV variations on the board by clicking on moves in the PV line, without polluting the game's actual move history
+    - `[x]` Optimized backend review endpoint to leverage an asyncio.Semaphore(3) throttling concurrent Stockfish tasks, eliminating process congestion and timeouts on long games
+    - `[x]` Optimized App.tsx review task flow to send a single request instead of concurrent duplicate requests, cutting resource load in half
+    - `[x]` Fixed parseScore in EvaluationBar to correctly support mate prefixes (like -M or M) and assign appropriate infinity bounds (remedying freezes/glitches)
+- `[x]` Game Review Pipeline Audit & Presentation
+    - `[x]` Log ply-by-ply running accuracies and contributions in backend logs
+    - `[x]` Add running_white_accuracy and running_black_accuracy to move diagnostics payload
+    - `[x]` Display running White/Black accuracies in Developer Diagnostics panel
+    - `[x]` Fix stale history closure bug in selectPosition using customHistory param
+    - `[x]` Correctly activate isReviewMode (readOnly) on review completion
+    - `[x]` Validate all backend calculations and aggregate accuracies deterministically
+    - `[x]` Calibrate regression corpus assertions for k=0.046 under depth-8 limits
+- `[x]` High-Performance Evaluation Graph & Move Classifier Overhaul
+    - `[x]` Split EvaluationGraph into static and hover components (`StaticGraphLayer` memoization)
+    - `[x]` Implement direct DOM updates for tooltip and guideline on mouse move (avoiding React state re-renders)
+    - `[x]` Utilize `requestAnimationFrame` for buttery-smooth 60fps graph scrubs
+    - `[x]` Assign stable keys (`marker-${idx}`) to markers to prevent flickering/flashing
+    - `[x]` Redesign move classifier in `utils.py` using strict tactical & MultiPV heuristics
+    - `[x]` Implement `is_piece_threatened` filter to exclude normal trades/re-captures from Brilliant
+    - `[x]` Map forced move classifications to grey badge `F` representation across UI
+    - `[x]` Calibrate and assert 100% test pass on backend unit and regression corpus
+- `[x]` Branding & Logo Upgrade
+    - `[x]` Copied the new MouseSlip logo containing the computer mouse design (`media__1783101747424.png`) to public and assets folders as `logo.png` and `favicon.ico`
+    - `[x]` Removed all redundant `logo.jpg` files and cleaned up unused legacy assets
+    - `[x]` Updated index.html to declare PNG favicons and Apple touch icons for modern devices and high-DPI displays
+    - `[x]` Styled the centered branding above the board in App.tsx to load logo.png using object-contain and soft drop-shadows to preserve artwork contours and transparency
+    - `[x]` Styled the "Chess Analysis" subtitle text with soft gold accents (#c5a059)
+- `[x]` Chessboard & Evaluation Bar
+    - `[x]` Increased board width by ~24% to `720px` to become the dominant visual centerpiece
+    - `[x]` Adjusted vertical evaluation bar height to exactly match the board height with zero top/bottom gaps
+    - `[x]` Removed numerical text label overlays from the evaluation bar itself to keep a clean, professional aesthetic
+    - `[x]` Guaranteed evaluation bar remains visible at all times, defaulting to 50/50 balance before analysis starts
+- `[x]` Player Information & Captured Pieces
+    - `[x]` Extracted player usernames and ratings directly from PGN headers using chess.js `.header()`
+    - `[x]` Designed top and bottom player panels adjacent to the board container
+    - `[x]` Computed captured pieces counts and material differences dynamically from FEN parsing
+    - `[x]` Displayed captured pieces with elegant unicode symbols alongside material lead indicator badges
+- `[x]` Moves List Auto-Scroll & High Capacity
+    - `[x]` Increased move list container maximum height (`max-h-[640px]`) to display large games (150+ moves) completely
+    - `[x]` Fixed auto-scroll alignment of active moves to scroll smoothly during navigation
+    - `[x]` Updated classification colors to match requirements: Green (Best, Excellent, Good), Yellow (Book), Orange (Inaccuracy), Dark Orange (Mistake), Red (Miss, Blunder)
+- `[x]` Premium Gold Accents Dark Theme
+    - `[x]` Added subtle muted gold borders (`border-[#c5a059]/25` and `/15`) around panels and active elements
+    - `[x]` Styled tabs active states and engine settings sliders with soft gold highlights
+    - `[x]` Upgraded Evaluation Graph line curve, active guide dot, and advantage area fills with muted gold strokes and gradients
+- `[x]` Verification & Build
+    - `[x]` Verified production compilation (`npm run build` succeeds in 1.25s with zero warnings or errors)
+    - `[x]` Updated walkthrough.md

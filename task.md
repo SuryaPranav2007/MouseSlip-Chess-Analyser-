@@ -1,0 +1,144 @@
+# MouseSlip Premium Chess Analysis Upgrade Tasks
+
+- `[x]` MultiPV = 2 Live Candidate Recommendations
+    - `[x]` Configured backend Stockfish analysis stream to run under MultiPV=2 (`engine.analysis(board, multipv=2)`)
+    - `[x]` Tracked and cached `second_best_move` and `pv2` properties in backend memory caches
+    - `[x]` Propagated `secondBestMove` and `pv2` parameters over WebSocket endpoints
+    - `[x]` Configured Chessboard.tsx to render exactly two green arrows representing bestMove (MultiPV #1) and secondBestMove (MultiPV #2) candidates for the turn player
+    - `[x]` Removed opponent responses and next-move PV predictions, keeping arrows strictly aligned with the active player's choice options
+    - `[x]` Confirmed production build success
+- `[x]` Chessboard Selection & Drag-and-Drop Fix
+    - `[x]` Configured `onMoveRef` React Hook inside Chessboard.tsx to prevent stale closure calls back into App.tsx
+    - `[x]` Implemented `lastFenRef` and local FEN prediction algorithms to suppress redundant `cg.set({ fen })` redraw updates after user-made moves
+    - `[x]` Resolved the piece selection bug where piece clicks and drags could mismatch under asynchronous state delay lag
+    - `[x]` Confirmed production build success
+- `[x]` Two Green Arrows & End-of-Game UI
+    - `[x]` Re-configured Chessboard.tsx to render exactly two green arrows (best move pv[0] and opponent reply pv[1]) for the turn player
+    - `[x]` Removed destination highlights, landing square highlights, and secondary continuation blue/yellow arrows
+    - `[x]` Implemented terminal checkmate, stalemate, and draw checks inside `triggerAnalysis` and `handleBoardMove`
+    - `[x]` Cleared active engine bestMove and PV overlays immediately when game reaches terminal states
+    - `[x]` Displayed specific terminal reasons (e.g. checkmates, stalemates, insufficient material draws) via the premium toast notifications
+    - `[x]` Confirmed compilation success
+- `[x]` Packaged Stockfish Engine & Deployment Verification
+    - `[x]` Created a packaged `backend/bin` folder in the project and copied the Windows Stockfish binary to `backend/bin/stockfish-windows.exe`
+    - `[x]` Modified get_stockfish_path in engine.py to check for `backend/bin/stockfish-windows.exe` first for local Windows development, bypassing external machine dependencies
+    - `[x]` Retained fallback checks for the user's local Downloads folder and system PATH values
+    - `[x]` Verified that Linux/macOS environments fallback standard system paths (`/usr/games/stockfish` or `stockfish` on PATH) suitable for Render/Railway/VPS deployments
+    - `[x]` Verified Dockerfile setup installing stockfish via apt-get and exporting STOCKFISH_PATH appropriately
+    - `[x]` Confirmed backend tests succeed using the local packaged executable
+- `[x]` Live Engine Board Mode & Mode Switching
+    - `[x]` Added `isReviewMode` state in App.tsx to dynamically track whether a fixed PGN review game is loaded (Game Review Mode) or free exploration is active (Live Engine Mode)
+    - `[x]` Enabled interactive piece movement on the board by passing `readOnly={isReviewMode}` to the Chessboard component
+    - `[x]` Automatic mode switching: loading FEN or resetting puts the board in Live Engine Mode (interactive), while loading PGN puts the board in Game Review Mode (read-only)
+    - `[x]` Confirmed compilation success
+- `[x]` Real-Time Live Engine Assistant Mode (exactly 2 arrows)
+    - `[x]` Configured Chessboard.tsx to render exactly two engine recommendation arrows: Primary Arrow (pv[0]) in green for the best move, and Secondary Arrow (pv[1]) in blue representing the next move in the principal variation (opponent's response)
+    - `[x]` Synchronized arrows, evaluation bar, and principal variation line instantly during navigation, resetting, PGN loading, and FEN loading
+    - `[x]` Wiped previous recommendation arrows instantly when FEN or board position changes
+    - `[x]` Confirmed compilation success
+- `[x]` Live Engine Mode
+    - `[x]` Configured backend Stockfish analysis stream to extract and return `nps` and `nodes` metrics
+    - `[x]` Implemented state properties `liveDepth` and `liveNps` in App.tsx to track calculations in real time
+    - `[x]` Added an elegant Live Engine Running box in the ControlPanel dashboard displaying engine status, active search depth, and speed (kN/s)
+    - `[x]` Cached engine parameters locally in the FEN mapping to instantly recover search metrics on revisited positions
+    - `[x]` Verified production compilation success
+- `[x]` Read-Only Board Workflow
+    - `[x]` Configured Chessboard.tsx to disable all Chessground interactions (free moves, turn colors, drag/drop destination circles) when readOnly is enabled
+    - `[x]` Enabled readOnly={true} by default on the board rendering call in App.tsx
+    - `[x]` Implemented mouse down listener on outer Chessboard container to intercept interaction attempts and trigger a warning notification toast
+    - `[x]` Designed a premium, gold-accented fade-in-up toast overlay at the bottom center of the page
+    - `[x]` Configured an auto-clear effect in App.tsx to hide notifications after 4000ms
+    - `[x]` Verified production compilation success
+- `[x]` Turn-Restricted Move Recommendations
+    - `[x]` Modified shape drawing logic in Chessboard.tsx to filter out opponent moves (even indices: pv[1], pv[3], etc.) from the Principal Variation array
+    - `[x]` Rendered arrows only for the active side to move (pv[0] as green arrow + destination highlight, pv[2] as blue arrow, and pv[4] as yellow arrow)
+    - `[x]` Cleared old arrows instantly when FEN or turn changes during navigation or manual move play
+    - `[x]` Verified production compilation success
+- `[x]` Branding & Logo Upgrade (Official Mouse Crown Logo)
+    - `[x]` Copied the new MouseSlip logo containing the computer mouse and chess crown design (`media__1783102556753.jpg`) to public and assets folders as `logo.png` and `favicon.ico`
+    - `[x]` Cleaned up all other logo variations to keep a single, consistent branding identity
+    - `[x]` Rendered the logo centered above the chessboard container in App.tsx
+    - `[x]` Verified production compilation and updated distribution bundle (`dist/logo.png` size matches)
+- `[x]` Sequence & Transposition-Aware Opening Recognition
+    - `[x]` Redesigned `OpeningDetector` to support both move-order sequence matching (UCI paths) and transposition-aware position matching (EPDs)
+    - `[x]` Decoupled opening and variation strings (e.g. "Sicilian Defense" vs. "Najdorf Variation") from the database names
+    - `[x]` Implemented Out of Book history tracking, maintaining the last matched book opening and marking status as "Theory Ended"
+    - `[x]` Added special "FEN Analysis" status indicator for direct FEN loads where moves history is unavailable
+    - `[x]` Integrated move-by-move openings into PGN reviews and real-time WebSocket analysis streams
+    - `[x]` Designed a prominent opening banner above the board in App.tsx using gold accents (#c5a059) and dark styling to dynamically sync names, variations, and status
+    - `[x]` Verified compilation and backend test suite success
+- `[x]` Move Classification Engine Redesign
+    - `[x]` Replaced simplistic fixed centipawn thresholds with a dynamic winning probability drop model based on the Elo-formula mapping
+    - `[x]` Evaluated positional quality, tactical drops, only moves, and material sacrifices for Brilliant (!!), Great (!), and Miss (X) classifications
+    - `[x]` Tuned thresholds for Excellent, Best, Good, Inaccuracy, Mistake, and Blunder classifications
+    - `[x]` Passed all backend utility and classification tests successfully
+- `[x]` Real-Time real-time FEN & PGN Analysis Pipeline
+    - `[x]` Add engine PV (Principal Variation) state tracking to App.tsx and feed it to the Chessboard component
+    - `[x]` Render multiple color-coded PV arrows on the board (green for 1st best, blue for 2nd best, yellow for 3rd best) and highlight the destination square of the recommended move
+    - `[x]` Add an interactive, scrollable Engine PV Line display in the ControlPanel, converting raw UCI moves into standard algebraic notation (SAN)
+    - `[x]` Enable stepping through PV variations on the board by clicking on moves in the PV line, without polluting the game's actual move history
+    - `[x]` Optimized backend review endpoint to leverage an asyncio.Semaphore(3) throttling concurrent Stockfish tasks, eliminating process congestion and timeouts on long games
+    - `[x]` Optimized App.tsx review task flow to send a single request instead of concurrent duplicate requests, cutting resource load in half
+    - `[x]` Fixed parseScore in EvaluationBar to correctly support mate prefixes (like -M or M) and assign appropriate infinity bounds (remedying freezes/glitches)
+- `[x]` Chessboard & Evaluation Bar
+    - `[x]` Increased board width by ~24% to `720px` to become the dominant visual centerpiece
+    - `[x]` Adjusted vertical evaluation bar height to exactly match the board height with zero top/bottom gaps
+    - `[x]` Removed numerical text label overlays from the evaluation bar itself to keep a clean, professional aesthetic
+    - `[x]` Guaranteed evaluation bar remains visible at all times, defaulting to 50/50 balance before analysis starts
+- `[x]` Player Information & Captured Pieces
+    - `[x]` Extracted player usernames and ratings directly from PGN headers using chess.js `.header()`
+    - `[x]` Designed top and bottom player panels adjacent to the board container
+    - `[x]` Computed captured pieces counts and material differences dynamically from FEN parsing
+    - `[x]` Displayed captured pieces with elegant unicode symbols alongside material lead indicator badges
+- `[x]` Moves List Auto-Scroll & High Capacity
+    - `[x]` Increased move list container maximum height (`max-h-[640px]`) to display large games (150+ moves) completely
+    - `[x]` Fixed auto-scroll alignment of active moves to scroll smoothly during navigation
+    - `[x]` Updated classification colors to match requirements: Green (Best, Excellent, Good), Yellow (Book), Orange (Inaccuracy), Dark Orange (Mistake), Red (Miss, Blunder)
+- `[x]` Premium Gold Accents Dark Theme
+    - `[x]` Added subtle muted gold borders (`border-[#c5a059]/25` and `/15`) around panels and active elements
+    - `[x]` Styled tabs active states and engine settings sliders with soft gold highlights
+    - `[x]` Upgraded Evaluation Graph line curve, active guide dot, and advantage area fills with muted gold strokes and gradients
+- `[x]` Verification & Build
+    - `[x]` Verified production compilation (`npm run build` succeeds in 1.25s with zero warnings or errors)
+    - `[x]` Updated walkthrough.md
+- `[x]` Classification Overhaul & Visual Cleanliness (Checkpoint 39)
+    - `[x]` Rebuilt Brilliant move classification according to Chess.com's strict V2 criteria
+    - `[x]` Ensured mutually exclusive descriptions for Best Move vs Excellent Alternative moves
+    - `[x]` Created verify_brilliant_overhaul.py unit tests confirming all 3 requested brilliant move test cases
+    - `[x]` Formulated a shared classifications constants module to enforce consistent colors and icons across components
+    - `[x]` Appended dynamic horizontal evaluation badge to EvaluationBar.tsx
+    - `[x]` Redesigned opening display block in MoveList.tsx to float as a premium card, preventing visually cramped layouts
+    - `[x]` Audited and verified full frontend build compilation and backend tests
+- `[x]` Opening Moves Classification Fix (Task #2)
+    - `[x]` Removed book/theory move classification short-circuit in utils.py so that early moves get evaluated and classified normally
+    - `[x]` Confirmed that first moves now receive normal engine classification badges (such as "Best Move") in the review output without altering thresholds or visual design
+- `[x]` Chessboard Click Offset Alignment Fix (Task #3)
+    - `[x]` Triggered a bounds recalculation on Chessground during synchronization transitions and mouse down events to offset shift differences from dynamically rendering banners or rotating elements
+    - `[x]` Verified compilation and checked coordinates logic
+- `[x]` Scrollable Panels on Zoom / Overflow (Task #1)
+    - `[x]` Styled and integrated custom-scrollbar styling across sidebar containers and settings drawers to prevent cut-offs at 150-200% zoom levels
+- `[x]` Mobile / Small-Screen Landing Page (Task #2)
+    - `[x]` Developed the mobile landing screen featuring the logo, wordmark, and three stacked option cards
+    - `[x]` Programmed transition-routing states (New Analysis, Paste PGN, Import Games) with collapsible sidebar accordions for the board view on screen widths <768px
+- `[x]` Load FEN Bug Fix
+    - `[x]` Resolved NotImplementedError on Windows by introducing a thread-safe `BackgroundLoop` running on `ProactorEventLoop` to delegate Stockfish processes
+    - `[x]` Fixed stale state reference in `App.tsx` during `handleLoadFen` and `handleResetBoard` by passing explicit empty history array and -1 index to `triggerAnalysis`
+    - `[x]` Confirmed opening database matches actual EPD positions instead of previous game sequences
+- `[x]` Auto-Trigger Analysis on Mount Fix
+    - `[x]` Initialized `currentFenRef` with the starting FEN instead of an empty string, enabling instant auto-analysis on initial page load
+    - `[x]` Refactored callback props in `useWebSocket.ts` to be kept in refs, preventing connection unmount/remount churn loops when callback hook dependencies or object literals change reference
+    - `[x]` Relocated `onConnectionError` inline callback hook to a top-level named callback `handleConnectionError` in `App.tsx` for React hook safety
+- `[x]` MultiPV / 2nd-Best Move Pairing Fix
+    - `[x]` Overhauled the UCI info parser inside `ws_analysis_stream` in `main.py` to buffer PV lines per depth using `current_depth_info`
+    - `[x]` Synchronized emissions to happen only when both PV lines for the current depth are populated (or immediately if forced with 1 legal move)
+    - `[x]` Fixed stale cross-depth pairing by clearing the depth buffer atomically when the engine increases its search depth
+    - `[x]` Verified duplicate move suppression and non-duplicate yellow arrow rendering
+- `[x]` Eval Bar Readability & Checkmate Display Fix
+    - `[x]` Increased font size of vertical eval score label in `EvaluationBar.tsx` to `13px` for high readability at 100% zoom
+    - `[x]` Implemented dynamic text color swapping (`text-[#1A1A1A]` on light background, `text-[#eeeed2]` on dark background) to maintain contrast ratio
+    - `[x]` Passed `isCheckmate` and `turnColor` props to `EvaluationBar` from `Chessboard.tsx` using `chess.js` checks on current FEN
+    - `[x]` Overrode `whitePercentage` to 100% or 0% on checkmate to completely fill the bar with the winning side's color, and rendered vertical label "1" at the winning side's end while suppressing numeric badges
+- `[x]` Custom FEN Load State Synchronization Fix
+    - `[x]` Fixed `activeFen` fallback in `App.tsx` at `activeIndex === -1` to fall back to the dynamic `fen` state instead of a hardcoded starting position, allowing the board to visually update on custom FEN imports
+    - `[x]` Resolved evaluation stuck state at `activeIndex === -1` by mapping `activeEval` and `activeEvalCanonical` to `evaluation` and `evaluationCanonical` states instead of static values
+    - `[x]` Passed `isGameLoaded` state to `<MoveList />` and updated `MoveList.tsx` to render a custom position loaded ready/success placeholder when the board has a FEN loaded but no move history yet

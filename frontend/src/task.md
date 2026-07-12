@@ -1,0 +1,147 @@
+# MouseSlip Premium Chess Analysis Upgrade Tasks
+
+- `[x]` Critical Engine Stall Leak Fix (Live Engine Stall Recurring Fix)
+    - `[x]` Identified the root cause of the mid-game engine stall: worker engine leaks in `ws_analysis_stream` due to task cancellations occurring outside the `try` block.
+    - `[x]` Implemented a leak-proof `try-finally` block for `ws_analysis_stream`, `analyze_position`, and `analyze_position_review` inside `backend/main.py`.
+    - `[x]` Initialized `engine = None` at the top and placed the `acquire()` call within the `try` block, verifying that `release(engine)` is only called `if engine is not None` in the `finally` block.
+    - `[x]` Added `replace_dead_engine` to `EnginePool` inside `backend/engine.py` to automatically spawn a new replacement Stockfish process if an engine gets terminated or experiences an error, protecting pool capacity.
+    - `[x]` Gated all temporary telemetry logging behind `DEBUG_GEN_ID = false` on the frontend and cleaned up backend logging.
+    - `[x]` Confirmed production build and test suite success.
+- `[x]` Win%-Based Accuracy & Move Classification
+    - `[x]` Replaced CPL-based thresholds with standard win%-based model in utils.py
+    - `[x]` Implemented `centipawns_to_win_percent` and `score_to_win_percent` formulas (handling mates and extremes)
+    - `[x]` Implemented `win_percent_loss` and standard move accuracy mathematical mapping
+    - `[x]` Updated classification rules:
+        - Book: checked first, takes priority
+        - Best: exact UCI move match
+        - Excellent: loss < 2.0
+        - Good: loss < 5.0
+        - Inaccuracy: loss < 10.0
+        - Mistake: loss < 20.0
+        - Blunder: loss >= 20.0
+        - Miss: win% before > 85 (or mate available) and win% loss >= 10.0
+        - Great: played move is Best, and second-best move drops win% by >= 10.0
+        - Brilliant: sacrifice check (net material loss >= 250cp), played move is Best/Excellent (loss < 2.0), and win_before <= 90.0
+    - `[x]` Updated backend test suite test_backend.py to verify win%-based accuracies and blunder mock CP levels
+    - `[x]` Confirmed test_backend.py passes successfully
+- `[x]` Opening Detection PGN Loading Fix
+    - `[x]` Passed `parsedMoves` and `parsedMoves.length - 1` directly to `triggerAnalysis` inside `handleLoadPgn` in App.tsx
+    - `[x]` Confirmed openings are correctly loaded on Game Review entry instead of defaulting to "Custom Position"
+- `[x]` Guarantee Engine Lines Through Game End
+    - `[x]` Ensured that engine analysis runs on every single move with zero gaps, stopping only when checkmate or draw conditions are reached
+    - `[x]` Confirmed compilation success
+- `[x]` Watchdog Timer
+    - `[x]` Added `watchdogTimerRef` to App.tsx to automatically detect stuck/dropped engine requests
+    - `[x]` Configured 4-second timeout: automatically retries analysis for the current position if no `info depth` is returned
+    - `[x]` Used Refs (`currentFenRef`, `currentHistoryRef`, `currentIndexRef`) to ensure retries load the fresh board state rather than stale closure values
+    - `[x]` Confirmed production build success
+- `[x]` Audited Generation-ID Pipeline
+    - `[x]` Audited the generation-ID comparisons: added trailing-edge gen_id validation checks inside the throttled setTimeout callbacks to eliminate late race conditions
+    - `[x]` Passed `handleConnectionChange` to `useWebSocket` hook in App.tsx, triggering immediate analysis on socket reconnects to prevent permanent stalls after connection blips
+    - `[x]` Confirmed production build success
+- `[x]` Stop/Go Sequencing Awaited
+    - `[x]` Verified that backend `await active_task` fully executes and blocks until the python-chess engine context manager handles `stop` command and releases workers cleanly
+    - `[x]` Confirmed production build success
+- `[x]` Remove Opening Banner
+    - `[x]` Eradicated the Opening & Variation Prominent Banner from App.tsx above the chessboard
+    - `[x]` Eliminated any vertical board-shifting layout instability caused by appearing/disappearing banners
+    - `[x]` Confirmed production build success
+- `[x]` Relocate Opening Display
+    - `[x]` Moved the opening display inside the Moves panel, above the notation headers and beneath the tab headers in MoveList.tsx
+    - `[x]` Sized the relocated opening display container with a fixed `min-height: '76px'` to guard against name/variation height transitions shifting the moves list layout below it
+    - `[x]` Confirmed production build success
+- `[x]` Persistent Opening Display
+    - `[x]` Programmed a neutral placeholder ("Analyzing opening…") inside the fixed-height container on move 1 before any opening has been recognized to avoid layout height jumps
+    - `[x]` Updated opening text dynamically as deeper theory is reached
+    - `[x]` Guaranteed that the deepest recognized opening name remains visible for the remainder of the game
+    - `[x]` Confirmed production build success
+- `[x]` Board Stability Safety Net
+    - `[x]` Added a dedicated `ResizeObserver` observing the inner Chessground container ref inside Chessboard.tsx
+    - `[x]` Configured the observer to call `cg.redrawAll()` whenever the board container's bounds change
+    - `[x]` Confirmed production build success
+- `[x]` Board Width Divisible by 8
+    - `[x]` Configured `ResizeObserver` in Chessboard.tsx to calculate target board dimensions as the largest multiple of 8 fitting the parent container
+    - `[x]` Replaced `width` and `height` properties in `.cg-wrap` within index.css to allow style attribute dimension changes
+    - `[x]` Cleaned up global box-sizing rules
+    - `[x]` Confirmed production build success
+- `[x]` Engine panel & Eval Bar persistence
+    - `[x]` Wrapped `EvaluationBar` inside `Chessboard`'s size-locked flex-row container
+    - `[x]` Removed clearing of `pv` and `evaluation` inside `triggerAnalysis` in App.tsx
+    - `[x]` Tracked FEN changes for the active PV via the new `pvFen` state
+    - `[x]` Configured backend opening detector to sequential-walk UCI paths
+    - `[x]` Implemented leading-edge throttled updates
+    - `[x]` Confirmed production build success
+- `[x]` Game Over Result Banner
+    - `[x]` Removed floating toast overlay, replacing it with a static, dedicated status banner directly beneath the chessboard
+    - `[x]` Styled the game-over banner with a subtle dark background, gold border, and fade-in animations
+    - `[x]` Confirmed production build success
+- `[x]` Piece Selection offset fix
+    - `[x]` Removed conflicting `aspect-[1.03/1]` property on the Unified Board Container in App.tsx
+    - `[x]` Removed conflicting `aspect-square` property on the Chessboard parent wrapper in App.tsx
+    - `[x]` Allowed the inner Chessboard element to determine its height based on its natural square width and maximum width limits
+    - `[x]` Confirmed production build success
+- `[x]` MultiPV = 2 Live Candidate Recommendation Arrows
+    - `[x]` Configured Chessboard.tsx to render exactly 2 recommendation arrows representing bestMove (green) and secondBestMove (yellow) candidates
+    - `[x]` Programmed synchronous arrow resetting on move plays and navigation selections
+    - `[x]` Confirmed production build success
+- `[x]` Decoupled Board Events & Freeze Bug Fix
+    - `[x]` Wrapped Chessground's `after` move execution callback in a `setTimeout(..., 0)` inside Chessboard.tsx
+    - `[x]` Resolved the board freeze bug, ensuring Chessground's internal drop animation completes cleanly
+    - `[x]` Confirmed production build success
+- `[x]` Comprehensive Debug Logging Setup
+    - `[x]` Integrated detailed telemetry printouts on the frontend and backend
+- `[x]` Chessboard Turn-Switching & Selection Bug Fixes
+    - `[x]` Resolved turn switching bug ensuring pieces for the turn side become active and opponent pieces become inactive immediately upon move completion
+    - `[x]` Confirmed production build success
+- `[x]` MultiPV = 2 Live Candidate Recommendations
+    - `[x]` Configured backend Stockfish analysis stream to run under MultiPV=2
+    - `[x]` Confirmed production build success
+- `[x]` Chessboard Selection & Drag-and-Drop Fix
+    - `[x]` Configured `onMoveRef` React Hook inside Chessboard.tsx to prevent stale closure calls back into App.tsx
+    - `[x]` Confirmed piece selection behavior behaves correctly
+- `[x]` Two Green Arrows & End-of-Game UI
+    - `[x]` Re-configured Chessboard.tsx to render exactly two green arrows for the turn player
+    - `[x]` Cleared active engine bestMove and PV overlays immediately when game reaches terminal states
+    - `[x]` Confirmed compilation success
+- `[x]` Packaged Stockfish Engine & Deployment Verification
+    - `[x]` Created a packaged `backend/bin` folder and copied the Windows Stockfish binary to `backend/bin/stockfish-windows.exe`
+    - `[x]` Confirmed backend tests succeed using the local packaged executable
+- `[x]` Live Engine Board Mode & Mode Switching
+    - `[x]` Added `isReviewMode` state in App.tsx to track exploration versus review
+    - `[x]` Confirmed compilation success
+- `[x]` Real-Time Live Engine Assistant Mode (exactly 2 arrows)
+    - `[x]` Configured Chessboard.tsx to render exactly two engine recommendation arrows
+    - `[x]` Confirmed compilation success
+- `[x]` Live Engine Mode
+    - `[x]` Added an elegant Live Engine Running box in the ControlPanel dashboard displaying engine status, depth, and speed (kN/s)
+    - `[x]` Confirmed production compilation success
+- `[x]` Read-Only Board Workflow
+    - `[x]` Configured Chessboard.tsx to disable all Chessground interactions when readOnly is enabled
+    - `[x]` Confirmed production compilation success
+- `[x]` Turn-Restricted Move Recommendations
+    - `[x]` Rendered arrows only for the active side to move
+    - `[x]` Confirmed production compilation success
+- `[x]` Branding & Logo Upgrade (Official Mouse Crown Logo)
+    - `[x]` Copied the new MouseSlip logo containing the computer mouse and chess crown design to public and assets folders
+    - `[x]` Verified production compilation
+- `[x]` Sequence & Transposition-Aware Opening Recognition
+    - `[x]` Redesigned `OpeningDetector` to support both move-order sequence matching and transposition-aware position matching
+    - `[x]` Verified compilation and backend test suite success
+- `[x]` Move Classification Engine Redesign
+    - `[x]` Replaced fixed centipawn thresholds with a winning probability drop model based on the Elo-formula
+    - `[x]` Passed all backend utility and classification tests successfully
+- `[x]` Real-Time real-time FEN & PGN Analysis Pipeline
+    - `[x]` Render multiple color-coded PV arrows on the board
+    - `[x]` Optimized backend review endpoint to leverage an asyncio.Semaphore(3) throttling concurrent Stockfish tasks
+    - `[x]` Fixed parseScore in EvaluationBar to correctly support mate prefixes
+- `[x]` Chessboard & Evaluation Bar
+    - `[x]` Adjusted vertical evaluation bar height to exactly match the board height with zero top/bottom gaps
+- `[x]` Player Information & Captured Pieces
+    - `[x]` Computed captured pieces counts and material differences dynamically from FEN parsing
+- `[x]` Moves List Auto-Scroll & High Capacity
+    - `[x]` Increased move list container maximum height to display large games completely
+- `[x]` Muted Gold Accents Theme
+    - `[x]` Added subtle muted gold borders around panels and active elements
+- `[x]` Verification & Build
+    - `[x]` Verified production compilation
+    - `[x]` Updated walkthrough.md
