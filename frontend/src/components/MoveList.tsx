@@ -107,12 +107,25 @@ export const MoveList: React.FC<MoveListProps> = ({
     });
   }
 
-  // Scroll active move into view automatically
+  // Scroll active move into view automatically — scoped to container only (no page scroll)
   useEffect(() => {
     if (!containerRef.current || activeTab !== 'moves') return;
-    const activeElement = containerRef.current.querySelector('.active-move');
+    const activeElement = containerRef.current.querySelector('.active-move') as HTMLElement | null;
     if (activeElement) {
-      activeElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      const container = containerRef.current;
+      const elementTop = activeElement.offsetTop - container.offsetTop;
+      const elementBottom = elementTop + activeElement.offsetHeight;
+      const containerScrollTop = container.scrollTop;
+      const containerScrollBottom = containerScrollTop + container.clientHeight;
+
+      if (elementTop < containerScrollTop) {
+        // Element is above the visible area — scroll up
+        container.scrollTop = elementTop - 8;
+      } else if (elementBottom > containerScrollBottom) {
+        // Element is below the visible area — scroll down
+        container.scrollTop = elementBottom - container.clientHeight + 8;
+      }
+      // If already in view, do nothing — no jitter, no page scroll
     }
   }, [currentIndex, activeTab]);
 
