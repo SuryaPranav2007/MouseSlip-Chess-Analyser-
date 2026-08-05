@@ -142,13 +142,16 @@ async def analyze_position(fen: str, depth_limit: int = 12) -> Dict[str, Any]:
 
     board = chess.Board(fen)
     if board.is_game_over():
-        # Immediate game over eval
+        # Use canonical evaluation to correctly reflect which side won.
+        # Previously hardcoded "M0" always implied White wins — wrong for Black checkmates.
+        eval_canonical = board_to_canonical_evaluation(board)
         result = {
-            "score": "M0" if board.is_checkmate() else "0.00",
-            "cp": 0,
+            "score": eval_canonical["score_str"],
+            "cp": -10000 if board.is_checkmate() and board.turn == chess.WHITE else (10000 if board.is_checkmate() else 0),
             "best_move": None,
             "pv": [],
-            "depth": 0
+            "depth": 0,
+            "eval_canonical": eval_canonical
         }
         analysis_cache[fen_key] = result
         return result
@@ -266,7 +269,8 @@ async def analyze_position_review(fen: str, depth_limit: int = 12) -> Dict[str, 
         cp_white1 = score1.white().score()
         if score1.is_mate():
             mate_val1 = score1.white().mate()
-            score_str1 = f"M{mate_val1}"
+            # Format: positive mate_val = White wins ("M3"), negative = Black wins ("-M3")
+            score_str1 = f"M{mate_val1}" if mate_val1 >= 0 else f"-M{abs(mate_val1)}"
             cp1 = 10000 if mate_val1 >= 0 else -10000
         else:
             score_str1 = f"{cp_white1/100:+.2f}" if cp_white1 is not None else "0.00"
