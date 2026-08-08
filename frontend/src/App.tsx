@@ -8,6 +8,8 @@ import MoveList from './components/MoveList';
 import type { MoveItem, ReviewStats } from './components/MoveList';
 import { EvaluationGraph } from './components/EvaluationGraph';
 import { MoveClassificationPopup } from './components/MoveClassificationPopup';
+import { PromotionPicker } from './components/PromotionPicker';
+import type { PromotionPiece } from './components/PromotionPicker';
 import { TelemetryPanel } from './components/TelemetryPanel';
 import { useWebSocket } from './hooks/useWebSocket';
 import type { AnalysisData, OpeningData, CanonicalEval } from './hooks/useWebSocket';
@@ -227,6 +229,16 @@ export default function App() {
   // Terminal result for the explored position specifically — shown in the banner.
   // Separate from terminalResult (which is the reviewed game's game-over state).
   const [explorationTerminalResult, setExplorationTerminalResult] = useState<string | null>(null);
+
+  // Pawn promotion picker state
+  // When a pawn move lands on the last rank, we pause here instead of executing
+  const [pendingPromotion, setPendingPromotion] = useState<{
+    from: string; to: string; color: 'white' | 'black'; isExploration: boolean;
+  } | null>(null);
+  // Board pixel size — populated by Chessboard's onBoardSizeChange, used to position the picker
+  const [boardSize, setBoardSize] = useState<number>(560);
+  // Imperative ref to Chessground's snap function — used to revert a cancelled promotion
+  const snapBoardRef = useRef<(() => void) | null>(null);
 
   // Advanced Telemetry & Performance states
   const [engineStatus, setEngineStatus] = useState<'Idle' | 'Starting' | 'Searching' | 'Cancelling' | 'Completed' | 'Error'>('Idle');
@@ -934,21 +946,42 @@ export default function App() {
     triggerAnalysis(chessInstance.fen(), activeHistory, index);
   }, [history, getLegalDests, triggerAnalysis]);
 
+  // Helper: returns true if moving a pawn from->to is a promotion move
+  const isPromotionMove = (from: string, to: string, boardFenForCheck: string): boolean => {
+    try {
+      const piece = new Chess(boardFenForCheck).get(from as any);
+      if (!piece || piece.type !== 'p') return false;
+      const toRank = to[1];
+      return (piece.color === 'w' && toRank === '8') || (piece.color === 'b' && toRank === '1');
+    } catch {
+      return false;
+    }
+  };
+
   // Handle board drag-and-drop moves made by user
   const handleBoardMove = useCallback((from: string, to: string) => {
     if (from === to) return;
     positionSourceRef.current = 'live_move';
     const chessInstance = chessRef.current;
-    
+
     // If viewing an analysed game (isReviewMode is true), play moves on a temporary exploration branch
     if (isReviewMode) {
       const activeIdx = previewIndex !== null ? previewIndex : currentIndex;
       const activeMove = activeIdx >= 0 && activeIdx < history.length ? history[activeIdx] : null;
-      const baseFen = exploredFen !== null 
-        ? exploredFen 
+      const baseFen = exploredFen !== null
+        ? exploredFen
         : (activeIdx === -1 ? (history[0]?.fen_before || new Chess().fen()) : (activeMove?.fen_after || fen));
+
+      // Intercept promotion moves — pause and show picker
+      if (isPromotionMove(from, to, baseFen)) {
+        const tempChess = new Chess(baseFen);
+        const piece = tempChess.get(from as any);
+        const color = piece?.color === 'w' ? 'white' : 'black';
+        setPendingPromotion({ from, to, color, isExploration: true });
+        return;
+      }
+
       const tempChess = new Chess(baseFen);
-      
       try {
         const move = tempChess.move({ from, to, promotion: 'q' });
         if (move) {
@@ -977,8 +1010,16 @@ export default function App() {
       return;
     }
 
+    // Intercept promotion moves in normal play — pause and show picker
+    if (isPromotionMove(from, to, chessInstance.fen())) {
+      const piece = chessInstance.get(from as any);
+      const color = piece?.color === 'w' ? 'white' : 'black';
+      setPendingPromotion({ from, to, color, isExploration: false });
+      return;
+    }
+
     try {
-      const move = chessInstance.move({ from, to, promotion: 'q' });
+      const move = chessInstance.move({ from, to });
       if (move) {
         playMoveSound(move.san);
         // Synchronously clear recommendations first
@@ -1077,7 +1118,96 @@ export default function App() {
     }
   }, [fen, history, currentIndex, getLegalDests, triggerAnalysis, isReviewMode, exploredFen, previewIndex]);
 
+  // Called when user picks a piece in the promotion picker
+  const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
+    if (!pendingPromotion) return;
+    const { from, to, isExploration } = pendingPromotion;
+    setPendingPromotion(null); // dismiss picker
+
+    if (isExploration) {
+      // Exploration branch (review mode)
+      const activeIdx = previewIndex !== null ? previewIndex : currentIndex;
+      const activeMove = activeIdx >= 0 && activeIdx < history.length ? history[activeIdx] : null;
+      const baseFen = exploredFen !== null
+        ? exploredFen
+        : (activeIdx === -1 ? (history[0]?.fen_before || new Chess().fen()) : (activeMove?.fen_after || fen));
+      const tempChess = new Chess(baseFen);
+      try {
+        const move = tempChess.move({ from, to, promotion: piece });
+        if (move) {
+          playMoveSound(move.san);
+          setBestMove(null); setSecondBestMove(null); setPv([]);
+          const newFen = tempChess.fen();
+          exploredFenRef.current = newFen;
+          setExploredFen(newFen);
+          setExploredLastMove([from, to]);
+          setExploredLegalDests(getLegalDests(tempChess));
+          triggerAnalysis(newFen, undefined, undefined, true);
+        }
+      } catch (err) {
+        console.warn('Invalid promotion (exploration):', err);
+      }
+    } else {
+      // Normal play branch
+      const chessInstance = chessRef.current;
+      try {
+        const move = chessInstance.move({ from, to, promotion: piece });
+        if (move) {
+          playMoveSound(move.san);
+          setBestMove(null); setSecondBestMove(null); setPv([]);
+          const newFen = chessInstance.fen();
+          console.log('[FRONTEND] Promotion played:', from + to + piece, 'FEN:', newFen);
+          setFen(newFen);
+          setLegalDests(getLegalDests(chessInstance));
+          setLastMove([from, to]);
+          const newMoveItem: MoveItem = {
+            move_number: chessInstance.history().length,
+            color: chessInstance.turn() === 'b' ? 'white' : 'black',
+            san: move.san,
+            uci: from + to + piece,
+            fen_before: fen,
+            fen_after: newFen,
+          };
+          const newHistory = [...history.slice(0, currentIndex + 1), newMoveItem];
+          setIsGameLoaded(true);
+          if (chessInstance.isGameOver()) {
+            let reason = "Game Over";
+            let finalEval = '0.00';
+            let finalEvalCanonical: CanonicalEval = { type: 'cp', value: 0, score_str: 'Draw', white_win_prob: 0.5, normalized: 0.0 };
+            if (chessInstance.isCheckmate()) {
+              const loser = chessInstance.turn() === 'w' ? 'White' : 'Black';
+              reason = `Checkmate — ${loser === 'White' ? 'Black' : 'White'} wins`;
+              finalEval = loser === 'White' ? 'B' : 'W';
+              finalEvalCanonical = { type: 'mate', value: 0, score_str: loser === 'White' ? '-M0' : 'M0', white_win_prob: loser === 'White' ? 0.0 : 1.0, normalized: loser === 'White' ? -10.0 : 10.0 };
+            } else if (chessInstance.isDraw()) {
+              reason = chessInstance.isStalemate() ? "Stalemate — Draw" : "Draw";
+              finalEval = 'Draw';
+            }
+            if (newHistory.length > 0) newHistory[newHistory.length - 1] = { ...newHistory[newHistory.length - 1], eval: finalEval, eval_canonical: finalEvalCanonical };
+            setHistory(newHistory); setCurrentIndex(newHistory.length - 1);
+            setTerminalResult(reason); setEvaluation(finalEval); setEvaluationCanonical(finalEvalCanonical);
+            setBestMove(null); setSecondBestMove(null); setPv([]); setPvFen(newFen); setLiveDepth(0); setLiveNps(0);
+          } else {
+            setHistory(newHistory); setCurrentIndex(newHistory.length - 1);
+            triggerAnalysis(newFen, newHistory, newHistory.length - 1);
+          }
+        }
+      } catch (err) {
+        console.warn('Invalid promotion move:', err);
+      }
+    }
+  }, [pendingPromotion, fen, history, currentIndex, exploredFen, previewIndex, getLegalDests, triggerAnalysis, playMoveSound]);
+
+  // Called when user clicks away from the promotion picker — revert the visual pawn move
+  const handlePromotionCancel = useCallback(() => {
+    setPendingPromotion(null);
+    // Snap Chessground back to the current FEN (reverting the piece the user dragged)
+    snapBoardRef.current?.();
+  }, []);
+
+
   // Load FEN
+
   const handleLoadFen = (targetFen: string) => {
     positionSourceRef.current = 'fen_import';
     try {
@@ -1926,9 +2056,24 @@ export default function App() {
                       scoreCanonical={boardEvalCanonical}
                       classification={boardClassification}
                       classificationUci={boardClassificationUci}
+                      onBoardSizeChange={setBoardSize}
+                      snapBoardRef={snapBoardRef}
                     />
+
+                    {/* Promotion Picker Overlay */}
+                    {pendingPromotion && (
+                      <PromotionPicker
+                        color={pendingPromotion.color}
+                        onSelect={handlePromotionSelect}
+                        onCancel={handlePromotionCancel}
+                        boardSize={boardSize}
+                        destSquare={pendingPromotion.to}
+                        orientation={orientation}
+                      />
+                    )}
                   </div>
                 </div>
+
 
                 {/* Bottom Player Info Card */}
                 <div className="w-full flex items-center justify-between py-2 px-3 bg-[#151517] border border-[#C9A356]/18 rounded-b-xl text-xs font-semibold">

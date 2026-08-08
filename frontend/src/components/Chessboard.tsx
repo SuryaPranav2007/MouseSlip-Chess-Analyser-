@@ -23,6 +23,10 @@ interface ChessboardProps {
   scoreCanonical?: CanonicalEval | null;
   classification?: string | null;
   classificationUci?: string | null;
+  /** Called whenever the board's pixel size changes, e.g. on resize. */
+  onBoardSizeChange?: (size: number) => void;
+  /** Ref to an imperative snap function. Call snapBoard() to reset Chessground to the current FEN. */
+  snapBoardRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 export const Chessboard: React.FC<ChessboardProps> = ({
@@ -39,12 +43,26 @@ export const Chessboard: React.FC<ChessboardProps> = ({
   onManualMoveAttempt,
   scoreCanonical = null,
   classification = null,
-  classificationUci = null
+  classificationUci = null,
+  onBoardSizeChange,
+  snapBoardRef,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const [boardSize, setBoardSize] = useState<number>(560);
   const cgRef = useRef<Api | null>(null);
+
+  // Expose snap function so parent can imperatively reset Chessground to current FEN
+  useEffect(() => {
+    if (snapBoardRef) {
+      snapBoardRef.current = () => {
+        if (cgRef.current) {
+          cgRef.current.set({ fen });
+          cgRef.current.redrawAll();
+        }
+      };
+    }
+  }, [snapBoardRef, fen]);
 
   // Keep references to latest callbacks to prevent stale closures
   const onMoveRef = useRef(onMove);
@@ -221,6 +239,7 @@ export const Chessboard: React.FC<ChessboardProps> = ({
         // Force the size to be a multiple of 8
         const size = Math.max(240, Math.floor(minDim / 8) * 8);
         setBoardSize(size);
+        onBoardSizeChange?.(size);
       }
     });
 
@@ -228,7 +247,7 @@ export const Chessboard: React.FC<ChessboardProps> = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [onBoardSizeChange]);
 
   // Redraw Chessground when board size changes
   useEffect(() => {
