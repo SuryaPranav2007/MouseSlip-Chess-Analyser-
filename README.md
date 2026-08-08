@@ -265,6 +265,7 @@ The app is fully configured for split-hosting deployment:
 - **Lichess Game Import**: Search and load Lichess games directly by username (UI placeholder established, API wiring in roadmap).
 - **Custom Opening Library**: Ability to upload custom openings files and override Book state matching.
 
+### DEPLOYED LINK = https://mouse-slip-chess-analyser.vercel.app/
 ---
 
 **Author**
