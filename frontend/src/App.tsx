@@ -2063,12 +2063,9 @@ export default function App() {
                     {/* Promotion Picker Overlay */}
                     {pendingPromotion && (
                       <PromotionPicker
-                        color={pendingPromotion.color}
                         onSelect={handlePromotionSelect}
                         onCancel={handlePromotionCancel}
                         boardSize={boardSize}
-                        destSquare={pendingPromotion.to}
-                        orientation={orientation}
                       />
                     )}
                   </div>
